@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>March Madness · Last Digit Pool</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0e1a; --surface:#111827; --surface2:#1a2235;
+    --border:rgba(255,255,255,0.08); --text:#f0f4ff; --muted:#6b7a99;
+    --accent:#f97316; --accent2:#3b82f6; --green:#10b981; --radius:12px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+  /* Header */
+  .hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;position:sticky;top:0;z-index:100;}
+  .hdr-inner{max-width:900px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:58px;gap:12px;}
+  .logo{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:21px;color:var(--text);white-space:nowrap;}
+  .logo em{color:var(--accent);font-style:normal;}
+  .ball{display:inline-block;width:15px;height:15px;background:var(--accent);border-radius:50%;position:relative;top:1px;margin-right:6px;}
+  .hdr-right{display:flex;align-items:center;gap:8px;}
+  .btn-sm{display:flex;align-items:center;gap:5px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;padding:5px 12px;border-radius:8px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+  .btn-sm:hover{border-color:var(--accent2);color:var(--text);}
+  .btn-sm svg{width:13px;height:13px;flex-shrink:0;}
+  .spin{animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .upd{font-size:11px;color:var(--muted);}
+
+  /* Main */
+  .main{max-width:900px;margin:0 auto;padding:24px 20px 60px;}
+  .slabel{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+
+  /* Debug bar */
+  .debug-bar{background:#0d1117;border:1px solid rgba(59,130,246,0.25);border-radius:8px;padding:10px 14px;margin-bottom:20px;font-family:monospace;font-size:12px;color:#64748b;line-height:1.6;}
+  .debug-bar .ok{color:#34d399;}
+  .debug-bar .err{color:#f87171;}
+  .debug-bar .warn{color:#fbbf24;}
+
+  /* Combos */
+  .chips{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-bottom:22px;}
+  .chip{display:inline-flex;align-items:center;gap:7px;border-radius:999px;border:1px solid;padding:5px 11px 5px 15px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:opacity .15s;user-select:none;}
+  .chip.off{opacity:.3;}
+  .chip-x{font-size:12px;opacity:.6;border:none;background:none;cursor:pointer;color:inherit;padding:0;line-height:1;}
+  .chip-x:hover{opacity:1;}
+  .chip-add{background:transparent;border:1px dashed var(--border);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;border-radius:999px;padding:5px 14px;cursor:pointer;transition:all .15s;}
+  .chip-add:hover{border-color:var(--accent);color:var(--accent);}
+  .c0{background:rgba(249,115,22,.12);border-color:rgba(249,115,22,.5);color:#fb923c;}
+  .c1{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.5);color:#60a5fa;}
+  .c2{background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.5);color:#34d399;}
+  .c3{background:rgba(168,85,247,.12);border-color:rgba(168,85,247,.5);color:#c084fc;}
+  .c4{background:rgba(236,72,153,.12);border-color:rgba(236,72,153,.5);color:#f472b6;}
+
+  /* Stats */
+  .stats{display:flex;gap:8px;margin-bottom:18px;}
+  .stat{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;}
+  .stat-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+  .stat-val{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;line-height:1;}
+  .stat-val.g{color:var(--green);}
+
+  /* Filters */
+  .filters{display:flex;gap:5px;margin-bottom:20px;flex-wrap:wrap;}
+  .fbtn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;padding:5px 12px;border-radius:8px;cursor:pointer;transition:all .15s;}
+  .fbtn:hover{border-color:var(--accent2);color:var(--text);}
+  .fbtn.active{background:var(--accent2);border-color:var(--accent2);color:#fff;}
+
+  /* Manual entry */
+  .manual-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:20px;}
+  .manual-section h4{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;margin-bottom:12px;color:var(--text);}
+  .manual-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;}
+  .mfield{display:flex;flex-direction:column;gap:4px;}
+  .mfield label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+  .mfield input,.mfield select{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;padding:6px 10px;border-radius:8px;width:90px;text-align:center;}
+  .mfield input[type=text]{width:150px;font-size:13px;font-weight:400;font-family:'DM Sans',sans-serif;}
+  .btn-add-game{background:var(--accent);border:none;color:#fff;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;padding:8px 16px;border-radius:8px;cursor:pointer;white-space:nowrap;}
+  .btn-add-game:hover{opacity:.85;}
+
+  /* Round groups */
+  .rgroup{margin-bottom:24px;}
+  .rhdr{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;padding-bottom:7px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+  .rcnt{background:var(--surface2);color:var(--muted);font-size:10px;padding:1px 7px;border-radius:999px;font-weight:600;}
+
+  /* Game cards */
+  .glist{display:flex;flex-direction:column;gap:7px;}
+  .gcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 16px;}
+  .gcard.h0{border-color:rgba(249,115,22,.6);background:rgba(249,115,22,.06);}
+  .gcard.h1{border-color:rgba(59,130,246,.6);background:rgba(59,130,246,.06);}
+  .gcard.h2{border-color:rgba(16,185,129,.6);background:rgba(16,185,129,.06);}
+  .gcard.h3{border-color:rgba(168,85,247,.6);background:rgba(168,85,247,.06);}
+  .gcard.h4{border-color:rgba(236,72,153,.6);background:rgba(236,72,153,.06);}
+  .gcard.manual-card{border-style:dashed;}
+  .ctop{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .cdate{font-size:10px;color:var(--muted);}
+  .cright{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+  .spill{font-size:10px;padding:2px 9px;border-radius:999px;border:1px solid var(--border);color:var(--muted);background:var(--surface2);white-space:nowrap;}
+  .spill.live{color:#fb923c;border-color:rgba(249,115,22,.4);background:rgba(249,115,22,.1);}
+  .mtag{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;}
+  .trow{display:flex;align-items:center;justify-content:space-between;padding:6px 0;}
+  .trow+.trow{border-top:1px solid var(--border);}
+  .tleft{display:flex;align-items:center;gap:9px;min-width:0;}
+  .sd{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);width:16px;text-align:right;flex-shrink:0;}
+  .tn{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tn.dim{color:var(--muted);font-weight:600;}
+  .tright{display:flex;align-items:center;gap:9px;flex-shrink:0;}
+  .sc{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;min-width:32px;text-align:right;}
+  .sc.dim{color:var(--muted);}
+  .bub{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;border:1px solid var(--border);background:var(--surface2);color:var(--muted);flex-shrink:0;}
+  .bub.w{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.5);color:var(--green);}
+  .bub.l{background:rgba(59,130,246,.10);border-color:rgba(59,130,246,.4);color:var(--accent2);}
+  .bub.b0{background:rgba(249,115,22,.2);border-color:rgba(249,115,22,.6);color:#fb923c;}
+  .bub.b1{background:rgba(59,130,246,.2);border-color:rgba(59,130,246,.6);color:#60a5fa;}
+  .bub.b2{background:rgba(16,185,129,.2);border-color:rgba(16,185,129,.6);color:#34d399;}
+  .bub.b3{background:rgba(168,85,247,.2);border-color:rgba(168,85,247,.6);color:#c084fc;}
+  .bub.b4{background:rgba(236,72,153,.2);border-color:rgba(236,72,153,.6);color:#f472b6;}
+
+  .empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;line-height:1.8;}
+
+  /* Modal */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;align-items:center;justify-content:center;}
+  .overlay.open{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:26px;width:290px;}
+  .modal h3{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;margin-bottom:18px;}
+  .mrow{display:flex;gap:10px;margin-bottom:18px;}
+  .mf{flex:1;}
+  .mf label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;}
+  .mf select{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;padding:9px;border-radius:8px;text-align:center;cursor:pointer;appearance:none;}
+  .macts{display:flex;gap:8px;}
+  .bp{flex:1;background:var(--accent);border:none;color:#fff;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;padding:9px;border-radius:8px;cursor:pointer;}
+  .bp:hover{opacity:.85;}
+  .bc{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;padding:9px 14px;border-radius:8px;cursor:pointer;}
+
+  @media(max-width:600px){
+    .main{padding:18px 12px 60px;}
+    .stats{flex-wrap:wrap;}
+    .stat{min-width:calc(50% - 4px);}
+    .tn{font-size:14px;}
+    .upd{display:none;}
+    .mfield input[type=text]{width:120px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-inner">
+    <div class="logo"><span class="ball"></span>LAST <em>DIGIT</em> POOL</div>
+    <div class="hdr-right">
+      <span class="upd" id="upd"></span>
+      <button class="btn-sm" onclick="loadAll()">
+        <svg id="ri" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>
+          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Debug console -->
+  <div class="debug-bar" id="debugBar">Initializing…</div>
+
+  <!-- Combos -->
+  <div class="slabel">My combinations (Winner / Loser last digit)</div>
+  <div class="chips" id="chipRow"></div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat"><div class="stat-lbl">Games</div><div class="stat-val" id="sTotal">—</div></div>
+    <div class="stat"><div class="stat-lbl">Final</div><div class="stat-val" id="sFinal">—</div></div>
+    <div class="stat"><div class="stat-lbl">My hits</div><div class="stat-val g" id="sMatch">—</div></div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <button class="fbtn active" id="fAll"   onclick="sf('all')">All</button>
+    <button class="fbtn"        id="fFinal" onclick="sf('final')">Final only</button>
+    <button class="fbtn"        id="fMatch" onclick="sf('match')">My hits</button>
+    <button class="fbtn"        id="fLive"  onclick="sf('live')">Live now</button>
+  </div>
+
+  <!-- Manual entry (always available as fallback) -->
+  <div class="manual-section">
+    <h4>➕ Add game manually</h4>
+    <div class="manual-row">
+      <div class="mfield"><label>Winner</label><input type="text" id="mWin" placeholder="Team A" /></div>
+      <div class="mfield"><label>Score</label><input type="number" id="mWScore" min="0" max="200" placeholder="75" style="width:75px;" /></div>
+      <div class="mfield"><label>Loser</label><input type="text" id="mLose" placeholder="Team B" /></div>
+      <div class="mfield"><label>Score</label><input type="number" id="mLScore" min="0" max="200" placeholder="68" style="width:75px;" /></div>
+      <div class="mfield">
+        <label>Round</label>
+        <select id="mRound" style="width:130px;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;">
+          <option>Round 1</option><option>Round 2</option><option>Sweet 16</option>
+          <option>Elite Eight</option><option>Final Four</option><option>Championship</option>
+        </select>
+      </div>
+      <div class="mfield"><label>&nbsp;</label><button class="btn-add-game" onclick="addManual()">Add game</button></div>
+    </div>
+  </div>
+
+  <div id="content"><div class="empty">Loading…</div></div>
+</div>
+
+<!-- Combo modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3>Add Combination</h3>
+    <div class="mrow">
+      <div class="mf"><label>Winner digit</label><select id="nW"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select></div>
+      <div class="mf"><label>Loser digit</label><select id="nL"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select></div>
+    </div>
+    <div class="macts">
+      <button class="bp" onclick="addCombo()">Add</button>
+      <button class="bc" onclick="closeM()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Tournament dates 2026 ─────────────────────────────────────────────────────
+const ROUND_MAP = {
+  '20260317':'First Four','20260318':'First Four',
+  '20260319':'Round 1','20260320':'Round 1',
+  '20260321':'Round 2','20260322':'Round 2',
+  '20260326':'Sweet 16','20260327':'Sweet 16',
+  '20260328':'Elite Eight','20260329':'Elite Eight',
+  '20260404':'Final Four','20260406':'Championship'
+};
+const ROUND_ORDER = ['First Four','Round 1','Round 2','Sweet 16','Elite Eight','Final Four','Championship'];
+
+function todayKey(){
+  const d=new Date();
+  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+}
+function datesUpToToday(){
+  const t=parseInt(todayKey());
+  return Object.keys(ROUND_MAP).filter(d=>parseInt(d)<=t);
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let combos = JSON.parse(localStorage.getItem('mm_c')||'null') || [
+  {w:8,l:3,on:true},{w:6,l:2,on:true},{w:3,l:0,on:true}
+];
+let apiGames=[], manualGames=[], filter='all';
+const allGames=()=>[...apiGames,...manualGames];
+
+const save=()=>localStorage.setItem('mm_c',JSON.stringify(combos));
+const saveM=()=>localStorage.setItem('mm_mg',JSON.stringify(manualGames));
+const cc=i=>['c0','c1','c2','c3','c4'][i%5];
+const hc=i=>['h0','h1','h2','h3','h4'][i%5];
+const bc=i=>['b0','b1','b2','b3','b4'][i%5];
+const tc=i=>[
+  {bg:'rgba(249,115,22,.2)',color:'#fb923c'},
+  {bg:'rgba(59,130,246,.2)',color:'#60a5fa'},
+  {bg:'rgba(16,185,129,.2)',color:'#34d399'},
+  {bg:'rgba(168,85,247,.2)',color:'#c084fc'},
+  {bg:'rgba(236,72,153,.2)',color:'#f472b6'},
+][i%5];
+
+// ── Debug helper ──────────────────────────────────────────────────────────────
+const logs=[];
+function dbg(msg,type=''){
+  logs.push({msg,type,t:new Date().toLocaleTimeString()});
+  const bar=document.getElementById('debugBar');
+  if(bar) bar.innerHTML=logs.slice(-6).map(l=>`<span class="${l.type}">[${l.t}] ${l.msg}</span>`).join('<br>');
+}
+
+// ── Chips ─────────────────────────────────────────────────────────────────────
+function renderChips(){
+  document.getElementById('chipRow').innerHTML=
+    combos.map((c,i)=>`<div class="chip ${cc(i)} ${c.on?'':'off'}" onclick="tog(${i})">${c.w} / ${c.l}<button class="chip-x" onclick="event.stopPropagation();del(${i})">✕</button></div>`).join('')+
+    `<button class="chip-add" onclick="openM()">+ Add combo</button>`;
+}
+function tog(i){combos[i].on=!combos[i].on;save();renderChips();render();}
+function del(i){combos.splice(i,1);save();renderChips();render();}
+function openM(){document.getElementById('overlay').classList.add('open');}
+function closeM(){document.getElementById('overlay').classList.remove('open');}
+document.getElementById('overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeM();});
+function addCombo(){
+  const w=parseInt(document.getElementById('nW').value),l=parseInt(document.getElementById('nL').value);
+  if(!combos.find(c=>c.w===w&&c.l===l)){combos.push({w,l,on:true});save();renderChips();render();}
+  closeM();
+}
+
+// ── Manual entry ─────────────────────────────────────────────────────────────
+manualGames=JSON.parse(localStorage.getItem('mm_mg')||'[]');
+function addManual(){
+  const wn=document.getElementById('mWin').value.trim()||'Winner';
+  const ln=document.getElementById('mLose').value.trim()||'Loser';
+  const ws=parseInt(document.getElementById('mWScore').value)||0;
+  const ls=parseInt(document.getElementById('mLScore').value)||0;
+  const rnd=document.getElementById('mRound').value;
+  manualGames.push({id:'m'+Date.now(),wName:wn,lName:ln,ws,ls,wSeed:'',lSeed:'',
+    live:false,final:true,statusDesc:'Final',roundGroup:rnd,dateLabel:'manual',
+    sortKey:9e12+manualGames.length,isManual:true});
+  saveM();
+  document.getElementById('mWin').value='';
+  document.getElementById('mLose').value='';
+  document.getElementById('mWScore').value='';
+  document.getElementById('mLScore').value='';
+  render();
+}
+
+// ── Hits ──────────────────────────────────────────────────────────────────────
+function hits(g){
+  if(!g.final&&!g.live)return[];
+  const wd=g.ws%10,ld=g.ls%10;
+  return combos.map((c,i)=>({...c,idx:i})).filter(c=>c.on&&c.w===wd&&c.l===ld);
+}
+
+// ── Filter ────────────────────────────────────────────────────────────────────
+function sf(f){
+  filter=f;
+  ['fAll','fFinal','fMatch','fLive'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  document.getElementById({all:'fAll',final:'fFinal',match:'fMatch',live:'fLive'}[f]).classList.add('active');
+  render();
+}
+
+// ── Fetch single date — direct ESPN, no proxy ─────────────────────────────────
+async function fetchDate(dateStr){
+  // Try two ESPN endpoints directly — both are public and support CORS
+  const urls=[
+    `https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?dates=${dateStr}&limit=50`,
+    `https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?dates=${dateStr}&groups=100&limit=50`,
+  ];
+  for(const url of urls){
+    try{
+      const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d=await r.json();
+      const evs=d.events||[];
+      // Filter to tournament only: must have a bracketId or specific note keywords
+      const tourney=evs.filter(ev=>{
+        const comp=ev.competitions[0];
+        const note=(comp.notes||[]).map(n=>n.headline||'').join(' ').toLowerCase();
+        // Keep if it mentions ncaa, tournament, or has bracket data
+        return note.includes('ncaa')||note.includes('tournament')||note.includes('round')||
+               ev.season?.type===3||comp.conferenceCompetition===false;
+      });
+      // If no tourney-specific filter matches, just return all (in March all CBB = tourney anyway)
+      return (tourney.length>0?tourney:evs).map(ev=>parseEvent(ev,dateStr));
+    }catch(e){
+      dbg(`${dateStr}: ${e.message}`,'err');
+    }
+  }
+  return [];
+}
+
+function parseEvent(ev,dateStr){
+  const comp=ev.competitions[0];
+  const st=comp.status.type.name;
+  const live=st==='STATUS_IN_PROGRESS',final=st==='STATUS_FINAL';
+  const sd=comp.status.type.shortDetail||comp.status.type.description;
+  const home=comp.competitors.find(c=>c.homeAway==='home');
+  const away=comp.competitors.find(c=>c.homeAway==='away');
+  const hs=parseInt(home?.score||0),as_=parseInt(away?.score||0);
+  let wt,lt,ws,ls;
+  if(hs>=as_){wt=home;lt=away;ws=hs;ls=as_;}else{wt=away;lt=home;ws=as_;ls=hs;}
+  const rg=ROUND_MAP[dateStr]||(comp.notes?.[0]?.headline)||'NCAA Tournament';
+  return{
+    id:ev.id,
+    wName:wt?.team?.shortDisplayName||wt?.team?.abbreviation||'TBD',
+    lName:lt?.team?.shortDisplayName||lt?.team?.abbreviation||'TBD',
+    wSeed:wt?.curatedRank?.current||'',
+    lSeed:lt?.curatedRank?.current||'',
+    ws,ls,live,final,statusDesc:sd,
+    roundGroup:rg,
+    dateLabel:`${dateStr.slice(4,6)}/${dateStr.slice(6,8)}`,
+    sortKey:parseInt(dateStr)*1e5+parseInt(ev.id.slice(-5)||0),
+  };
+}
+
+// ── Load all ──────────────────────────────────────────────────────────────────
+async function loadAll(){
+  document.getElementById('ri').classList.add('spin');
+  dbg('Starting fetch…','warn');
+
+  const dates=datesUpToToday();
+  dbg(`Fetching ${dates.length} date(s): ${dates.join(', ')}`, 'warn');
+
+  let fetched=0;
+  const results=await Promise.allSettled(dates.map(d=>
+    fetchDate(d).then(gs=>{fetched+=gs.length;dbg(`${d}: got ${gs.length} game(s)`,'ok');return gs;})
+                .catch(e=>{dbg(`${d}: failed — ${e.message}`,'err');return[];})
+  ));
+
+  const flat=results.flatMap(r=>r.status==='fulfilled'?r.value:[]);
+  const seen=new Set();
+  apiGames=flat.filter(g=>{if(seen.has(g.id))return false;seen.add(g.id);return true;});
+  apiGames.sort((a,b)=>a.sortKey-b.sortKey);
+
+  document.getElementById('ri').classList.remove('spin');
+  document.getElementById('upd').textContent='Updated '+new Date().toLocaleTimeString();
+
+  if(apiGames.length===0){
+    dbg(`All fetches returned 0 games. Protocol: ${location.protocol}. Check network tab for errors.`,'err');
+  } else {
+    dbg(`Done — ${apiGames.length} API game(s) + ${manualGames.length} manual`,'ok');
+  }
+
+  render();
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render(){
+  const gs=allGames();
+  const fc=gs.filter(g=>g.final).length;
+  const mc=gs.filter(g=>hits(g).length>0).length;
+  document.getElementById('sTotal').textContent=gs.length;
+  document.getElementById('sFinal').textContent=fc;
+  document.getElementById('sMatch').textContent=mc;
+
+  let show=gs;
+  if(filter==='final') show=show.filter(g=>g.final);
+  if(filter==='match') show=show.filter(g=>hits(g).length>0);
+  if(filter==='live')  show=show.filter(g=>g.live);
+
+  const content=document.getElementById('content');
+  if(!show.length){
+    content.innerHTML=`<div class="empty">${gs.length===0
+      ?'No games loaded yet — try refreshing, or add scores manually above.'
+      :'No games match this filter.'}</div>`;
+    return;
+  }
+
+  // Group by round in canonical order
+  const groups={};
+  for(const g of show){
+    if(!groups[g.roundGroup]) groups[g.roundGroup]=[];
+    groups[g.roundGroup].push(g);
+  }
+  const orderedRounds=[...ROUND_ORDER,'NCAA Tournament','manual'].filter(r=>groups[r]);
+
+  content.innerHTML=orderedRounds.map(rnd=>{
+    const list=groups[rnd]||[];
+    return`<div class="rgroup">
+      <div class="rhdr">${rnd} <span class="rcnt">${list.length} game${list.length!==1?'s':''}</span></div>
+      <div class="glist">${list.map(gameCard).join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+function gameCard(g){
+  const h=hits(g),hasHit=h.length>0,hi=hasHit?h[0].idx:null;
+  const wd=(g.final||g.live)?g.ws%10:null;
+  const ld=(g.final||g.live)?g.ls%10:null;
+  const card=hasHit?`gcard ${hc(hi)}`:'gcard'+(g.isManual?' manual-card':'');
+  const sp=g.live?'spill live':'spill';
+  const wb=hasHit?`bub ${bc(hi)}`:(wd!==null?'bub w':'bub');
+  const lb=hasHit?`bub ${bc(hi)}`:(ld!==null?'bub l':'bub');
+  const badges=h.map(x=>{const col=tc(x.idx);return`<span class="mtag" style="background:${col.bg};color:${col.color}">W:${x.w}/L:${x.l}</span>`;}).join('');
+  return`<div class="${card}">
+    <div class="ctop">
+      <span class="cdate">${g.dateLabel}</span>
+      <div class="cright">${badges}<span class="${sp}">${g.statusDesc}</span></div>
+    </div>
+    <div class="trow">
+      <div class="tleft"><span class="sd">${g.wSeed}</span><span class="tn">${g.wName}</span></div>
+      <div class="tright"><span class="sc">${(g.final||g.live)?g.ws:'—'}</span><div class="${wb}">${wd!==null?wd:'?'}</div></div>
+    </div>
+    <div class="trow">
+      <div class="tleft"><span class="sd">${g.lSeed}</span><span class="tn dim">${g.lName}</span></div>
+      <div class="tright"><span class="sc dim">${(g.final||g.live)?g.ls:'—'}</span><div class="${lb}">${ld!==null?ld:'?'}</div></div>
+    </div>
+  </div>`;
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+renderChips();
+loadAll();
+</script>
+</body>
+</html>
