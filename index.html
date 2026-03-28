@@ -116,6 +116,22 @@
 
   .empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;line-height:1.8;}
 
+  /* Payout section */
+  .payout-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:20px;}
+  .payout-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;}
+  .payout-title{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+  .payout-total{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:#047857;}
+  .payout-rows{display:flex;flex-direction:column;gap:6px;}
+  .payout-row{display:flex;align-items:center;justify-content:space-between;font-size:13px;padding:7px 10px;border-radius:8px;background:var(--surface2);}
+  .payout-row.hit{background:rgba(5,150,105,.08);border:1px solid rgba(4,120,87,.2);}
+  .payout-game{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .payout-teams{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .payout-round-tag{font-size:11px;color:var(--muted);}
+  .payout-amt{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:#047857;flex-shrink:0;margin-left:12px;}
+  .payout-empty{font-size:13px;color:var(--muted);text-align:center;padding:8px 0;}
+  .payout-potential{font-size:11px;color:var(--muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+  .payout-potential span{font-weight:500;color:var(--text);}
+
   /* Modal */
   .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;align-items:center;justify-content:center;}
   .overlay.open{display:flex;}
@@ -180,6 +196,18 @@
     <button class="fbtn"        id="fFinal" onclick="sf('final')">Final only</button>
     <button class="fbtn"        id="fMatch" onclick="sf('match')">My hits</button>
     <button class="fbtn"        id="fLive"  onclick="sf('live')">Live now</button>
+  </div>
+
+  <!-- Payout -->
+  <div class="payout-box">
+    <div class="payout-header">
+      <span class="payout-title">My Payout</span>
+      <span class="payout-total" id="payoutTotal">$0</span>
+    </div>
+    <div class="payout-rows" id="payoutRows">
+      <div class="payout-empty">No hits yet — keep watching!</div>
+    </div>
+    <div class="payout-potential" id="payoutPotential"></div>
   </div>
 
   <!-- Manual entry (always available as fallback) -->
@@ -404,14 +432,73 @@ async function loadAll(){
   render();
 }
 
+// ── Payout rules ──────────────────────────────────────────────────────────────
+const PAYOUT = {
+  'First Four':0, 'Round 1':25, 'Round 2':25,
+  'Sweet 16':50, 'Elite Eight':50,
+  'Final Four':100, 'Championship':300
+};
+
+function roundPayout(roundGroup){ return PAYOUT[roundGroup]||0; }
+
 // ── Render ────────────────────────────────────────────────────────────────────
 function render(){
   const gs=allGames();
   const fc=gs.filter(g=>g.final).length;
-  const mc=gs.filter(g=>hits(g).length>0).length;
+  const hitGames=gs.filter(g=>hits(g).length>0);
+  const mc=hitGames.length;
   document.getElementById('sTotal').textContent=gs.length;
   document.getElementById('sFinal').textContent=fc;
   document.getElementById('sMatch').textContent=mc;
+
+  // ── Payout calculation ──
+  let totalPayout=0;
+  const payoutRows=document.getElementById('payoutRows');
+  const payoutTotal=document.getElementById('payoutTotal');
+  const payoutPotential=document.getElementById('payoutPotential');
+
+  if(hitGames.length===0){
+    payoutRows.innerHTML='<div class="payout-empty">No hits yet — keep watching!</div>';
+    payoutTotal.textContent='$0';
+  } else {
+    const rows=hitGames.map(g=>{
+      const amt=roundPayout(g.roundGroup);
+      totalPayout+=amt;
+      return`<div class="payout-row hit">
+        <div class="payout-game">
+          <span class="payout-teams">${g.wName} ${g.ws} · ${g.lName} ${g.ls}</span>
+          <span class="payout-round-tag">${g.roundGroup} &nbsp;·&nbsp; W:${g.ws%10} / L:${g.ls%10}</span>
+        </div>
+        <span class="payout-amt">${amt>0?'$'+amt:'—'}</span>
+      </div>`;
+    }).join('');
+    payoutRows.innerHTML=rows;
+    payoutTotal.textContent='$'+totalPayout;
+  }
+
+  // Show potential remaining payout — use known tournament structure, not just loaded games
+  const ROUND_STRUCTURE=[
+    {r:'Round 1',    games:32, amt:25},
+    {r:'Round 2',    games:16, amt:25},
+    {r:'Sweet 16',   games:8,  amt:50},
+    {r:'Elite Eight',games:4,  amt:50},
+    {r:'Final Four', games:2,  amt:100},
+    {r:'Championship',games:1, amt:300},
+  ];
+  // Count finals already played per round from loaded data
+  const finalsByRound={};
+  for(const g of gs){ if(g.final){ finalsByRound[g.roundGroup]=(finalsByRound[g.roundGroup]||0)+1; } }
+
+  const stillToPlay=ROUND_STRUCTURE
+    .map(r=>({ ...r, remaining: r.games-(finalsByRound[r.r]||0) }))
+    .filter(r=>r.remaining>0);
+  const maxRemaining=stillToPlay.reduce((s,r)=>s+(r.remaining*r.amt),0);
+  if(maxRemaining>0){
+    const parts=stillToPlay.map(r=>`${r.r} (${r.remaining} game${r.remaining!==1?'s':''} · $${r.remaining*r.amt} max)`).join(', ');
+    payoutPotential.innerHTML=`Still to play: <span>${parts}</span> — up to <span>$${maxRemaining}</span> more possible`;
+  } else {
+    payoutPotential.innerHTML='Tournament complete!';
+  }
 
   let show=gs;
   if(filter==='final') show=show.filter(g=>g.final);
